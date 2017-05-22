@@ -25,6 +25,7 @@ import org.hswebframework.web.commons.entity.Entity;
  *
  * @author zhouhao
  * @see Entity
+ * @see MapperEntityFactory
  * @since 3.0
  */
 public interface EntityFactory {
@@ -32,21 +33,46 @@ public interface EntityFactory {
      * 根据类型创建实体,类型必须为{@link Entity}的子类。
      *
      * @param entityClass 类型
-     * @param <T>       泛型,需实现{@link Entity}
-     * @return 实体
+     * @param <T>         泛型,需实现{@link Entity}
+     * @return 创建结果
      */
-    <T extends Entity> T newInstance(Class<T> entityClass);
+    <T> T newInstance(Class<T> entityClass);
+
+    /**
+     * 创建实体并设置默认的属性
+     *
+     * @param entityClass       实体类型
+     * @param defaultProperties 默认属性
+     * @param <S>               默认属性的类型
+     * @param <T>               实体类型
+     * @return 创建结果
+     * @see EntityFactory#copyProperties(Object, Object)
+     */
+    default <S, T> T newInstance(Class<T> entityClass, S defaultProperties) {
+        return copyProperties(defaultProperties, newInstance(entityClass));
+    }
 
     /**
      * 根据类型获取实体的真实的实体类型,
      * 可通过此方法获取获取已拓展的实体类型，如:<br>
      * <code>
-     * factory.getInstanceType(MyBeanInterface.class); -> class SimpleMyBeanInterface
+     * factory.getInstanceType(MyBeanInterface.class);
      * </code>
      *
      * @param entityClass 类型
-     * @param <T>       泛型
+     * @param <T>         泛型
      * @return 实体类型
      */
-    <T extends Entity> Class<T> getInstanceType(Class<T> entityClass);
+    <T> Class<T> getInstanceType(Class<T> entityClass);
+
+    /**
+     * 拷贝对象的属性
+     *
+     * @param source 要拷贝到的对象
+     * @param target 被拷贝的对象
+     * @param <S>    要拷贝对象的类型
+     * @param <T>    被拷贝对象的类型
+     * @return 被拷贝的对象
+     */
+    <S, T> T copyProperties(S source, T target);
 }

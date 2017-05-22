@@ -1,13 +1,19 @@
 package org.hswebframework.web.authorization.access;
 
 /**
+ * 自定义控制器的数据级权限控制器
+ *
  * @author zhouhao
- * @see DataAccess.Type#CUSTOM
+ * @see DefaultType#CUSTOM
  */
-public interface CustomDataAccess extends DataAccess {
+public interface CustomDataAccess extends DataAccessConfig {
+
+    /**
+     * @return 自定义的控制器
+     */
     DataAccessController getController();
 
     default String getType() {
-        return Type.CUSTOM.name();
+        return DefaultType.CUSTOM;
     }
 }

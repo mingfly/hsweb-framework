@@ -20,6 +20,8 @@ package org.hswebframework.web.controller.message;
 
 
 import com.alibaba.fastjson.JSON;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -28,23 +30,74 @@ import java.util.*;
 /**
  * 响应消息。controller中处理后，返回此对象，响应请求结果给客户端。
  */
-public class ResponseMessage implements Serializable {
+@ApiModel(description = "响应结果")
+public class ResponseMessage<T> implements Serializable {
     private static final long serialVersionUID = 8992436576262574064L;
 
-    /**
-     * 反馈数据
-     */
-    private Object data;
-
-    /**
-     * 反馈信息
-     */
     private String message;
 
-    /**
-     * 响应码
-     */
-    private int code;
+    private T result;
+
+    private int status;
+
+    private Long timestamp;
+
+    @ApiModelProperty("调用结果消息")
+    public String getMessage() {
+        return message;
+    }
+
+    @ApiModelProperty(value = "状态码", required = true)
+    public int getStatus() {
+        return status;
+    }
+
+    @ApiModelProperty("成功时响应数据")
+    public T getResult() {
+        return result;
+    }
+
+    @ApiModelProperty(value = "时间戳", required = true, dataType = "Long")
+    public Long getTimestamp() {
+        return timestamp;
+    }
+
+    public static ResponseMessage error(String message) {
+        return error(500, message);
+    }
+
+    public static ResponseMessage error(int status, String message) {
+        ResponseMessage msg = new ResponseMessage();
+        msg.message = message;
+        msg.status(status);
+        return msg.putTimeStamp();
+    }
+
+    public static <T> ResponseMessage<T> ok() {
+        return ok(null);
+    }
+
+    private ResponseMessage<T> putTimeStamp() {
+        this.timestamp = System.currentTimeMillis();
+        return this;
+    }
+
+    public static <T> ResponseMessage<T> ok(T data) {
+        return new ResponseMessage<T>()
+                .data(data)
+                .putTimeStamp()
+                .status(200);
+    }
+
+//    public ResponseMessage and(String key, Object value) {
+//        put(key, value);
+//        return this;
+//    }
+
+    public ResponseMessage<T> data(T data) {
+        this.result = data;
+        return this;
+    }
 
     /**
      * 过滤字段：指定需要序列化的字段
@@ -56,29 +109,15 @@ public class ResponseMessage implements Serializable {
      */
     private transient Map<Class<?>, Set<String>> excludes;
 
-    private transient boolean onlyData;
+    public ResponseMessage() {
 
-    private transient String callback;
-
-    public Map<String, Object> toMap() {
-        Map<String, Object> map = new HashMap<>();
-        if (data != null)
-            map.put("data", this.getData());
-        if (message != null)
-            map.put("message", this.getMessage());
-        map.put("code", this.getCode());
-        return map;
     }
 
-    protected ResponseMessage() {
-    }
-
-
-    public ResponseMessage include(Class<?> type, String... fields) {
+    public ResponseMessage<T> include(Class<?> type, String... fields) {
         return include(type, Arrays.asList(fields));
     }
 
-    public ResponseMessage include(Class<?> type, Collection<String> fields) {
+    public ResponseMessage<T> include(Class<?> type, Collection<String> fields) {
         if (includes == null)
             includes = new HashMap<>();
         if (fields == null || fields.isEmpty()) return this;
@@ -93,13 +132,13 @@ public class ResponseMessage implements Serializable {
                 } catch (Throwable e) {
                 }
             } else {
-                getStringListFormMap(includes, type).add(field);
+                getStringListFromMap(includes, type).add(field);
             }
         });
         return this;
     }
 
-    public ResponseMessage exclude(Class type, Collection<String> fields) {
+    public ResponseMessage<T> exclude(Class type, Collection<String> fields) {
         if (excludes == null)
             excludes = new HashMap<>();
         if (fields == null || fields.isEmpty()) return this;
@@ -114,62 +153,48 @@ public class ResponseMessage implements Serializable {
                 } catch (Throwable e) {
                 }
             } else {
-                getStringListFormMap(excludes, type).add(field);
+                getStringListFromMap(excludes, type).add(field);
             }
         });
         return this;
     }
 
-    public ResponseMessage exclude(Collection<String> fields) {
+    public ResponseMessage<T> exclude(Collection<String> fields) {
         if (excludes == null)
             excludes = new HashMap<>();
         if (fields == null || fields.isEmpty()) return this;
         Class type;
-        if (data != null) type = data.getClass();
+        if (getResult() != null) type = getResult().getClass();
         else return this;
         exclude(type, fields);
         return this;
     }
 
-    public ResponseMessage include(Collection<String> fields) {
+    public ResponseMessage<T> include(Collection<String> fields) {
         if (includes == null)
             includes = new HashMap<>();
         if (fields == null || fields.isEmpty()) return this;
         Class type;
-        if (data != null) type = data.getClass();
+        if (getResult() != null) type = getResult().getClass();
         else return this;
         include(type, fields);
         return this;
     }
 
-    public ResponseMessage exclude(Class type, String... fields) {
+    public ResponseMessage<T> exclude(Class type, String... fields) {
         return exclude(type, Arrays.asList(fields));
     }
 
-    public ResponseMessage exclude(String... fields) {
+    public ResponseMessage<T> exclude(String... fields) {
         return exclude(Arrays.asList(fields));
     }
 
-    public ResponseMessage include(String... fields) {
+    public ResponseMessage<T> include(String... fields) {
         return include(Arrays.asList(fields));
     }
 
-    protected Set<String> getStringListFormMap(Map<Class<?>, Set<String>> map, Class type) {
-        Set<String> list = map.get(type);
-        if (list == null) {
-            list = new HashSet<>();
-            map.put(type, list);
-        }
-        return list;
-    }
-
-    public Object getData() {
-        return data;
-    }
-
-    public ResponseMessage setData(Object data) {
-        this.data = data;
-        return this;
+    protected Set<String> getStringListFromMap(Map<Class<?>, Set<String>> map, Class type) {
+        return map.computeIfAbsent(type, k -> new HashSet<>());
     }
 
     @Override
@@ -177,84 +202,19 @@ public class ResponseMessage implements Serializable {
         return JSON.toJSONStringWithDateFormat(this, "yyyy-MM-dd HH:mm:ss");
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public ResponseMessage setCode(int code) {
-        this.code = code;
+    public ResponseMessage<T> status(int status) {
+        this.status = status;
         return this;
     }
 
-    public static ResponseMessage fromJson(String json) {
-        return JSON.parseObject(json, ResponseMessage.class);
-    }
-
+    @ApiModelProperty(hidden = true)
     public Map<Class<?>, Set<String>> getExcludes() {
         return excludes;
     }
 
+    @ApiModelProperty(hidden = true)
     public Map<Class<?>, Set<String>> getIncludes() {
         return includes;
-    }
-
-    public ResponseMessage onlyData() {
-        setOnlyData(true);
-        return this;
-    }
-
-    public void setOnlyData(boolean onlyData) {
-        this.onlyData = onlyData;
-    }
-
-    public boolean isOnlyData() {
-        return onlyData;
-    }
-
-    public ResponseMessage callback(String callback) {
-        this.callback = callback;
-        return this;
-    }
-
-    public String getCallback() {
-        return callback;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public static ResponseMessage ok() {
-        return ok(null);
-    }
-
-    public static ResponseMessage ok(Object data) {
-        ResponseMessage message = new ResponseMessage();
-        message.setCode(200);
-        message.setData(data);
-        return message;
-    }
-
-    public static ResponseMessage created(Object data) {
-        ResponseMessage message = new ResponseMessage();
-        message.setCode(201);
-        message.setData(data);
-        return message;
-    }
-
-    public static ResponseMessage error(String message) {
-        return error(message, 500);
-    }
-
-    public static ResponseMessage error(String message, int code) {
-        ResponseMessage response = new ResponseMessage();
-        response.setCode(code);
-        response.setMessage(message);
-        return response;
     }
 
 }

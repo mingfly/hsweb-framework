@@ -19,8 +19,8 @@
 package org.hswebframework.web.starter;
 
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import org.hswebframework.web.authorization.AuthorizationHolder;
-import org.hswebframework.web.authorization.AuthorizationSupplier;
+import org.hswebframework.web.ThreadLocalUtils;
+import org.hswebframework.web.authorization.AuthenticationSupplier;
 import org.hswebframework.web.commons.entity.factory.EntityFactory;
 import org.hswebframework.web.commons.entity.factory.MapperEntityFactory;
 import org.hswebframework.web.starter.convert.FastJsonHttpMessageConverter;
@@ -29,14 +29,22 @@ import org.hswebframework.web.starter.resolver.JsonParamResolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import java.util.List;
 
 /**
@@ -46,7 +54,11 @@ import java.util.List;
  */
 @Configuration
 @ComponentScan("org.hswebframework.web")
+@EnableConfigurationProperties(EntityProperties.class)
 public class HswebAutoConfiguration {
+
+    @Autowired
+    private EntityProperties entityProperties;
 
     @Bean
     @Primary
@@ -56,8 +68,8 @@ public class HswebAutoConfiguration {
         converter.setFeatures(
                 SerializerFeature.WriteNullListAsEmpty,
                 SerializerFeature.WriteNullNumberAsZero,
-                SerializerFeature.WriteNullBooleanAsFalse,
-                SerializerFeature.WriteDateUseDateFormat
+                SerializerFeature.WriteNullBooleanAsFalse
+//                SerializerFeature.WriteDateUseDateFormat
         );
         converter.setEntityFactory(entityFactory);
         return converter;
@@ -69,10 +81,8 @@ public class HswebAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(AuthorizationSupplier.class)
-    public AuthorizationArgumentResolver authorizationArgumentResolver(AuthorizationSupplier authorizationSupplier) {
-        AuthorizationHolder.setSupplier(authorizationSupplier);
-        return new AuthorizationArgumentResolver(authorizationSupplier);
+    public AuthorizationArgumentResolver authorizationArgumentResolver() {
+        return new AuthorizationArgumentResolver();
     }
 
     @Bean
@@ -83,13 +93,32 @@ public class HswebAutoConfiguration {
                 super.addArgumentResolvers(argumentResolvers);
                 argumentResolvers.addAll(handlerMethodArgumentResolvers);
             }
+
+            @Override
+            public void addInterceptors(InterceptorRegistry registry) {
+                registry.addInterceptor(new HandlerInterceptorAdapter() {
+                    @Override
+                    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+                        //clear thread local
+                        ThreadLocalUtils.clear();
+                    }
+                });
+            }
         };
     }
 
-    @Bean
-    @ConditionalOnMissingBean
+    @Bean(name = "validator")
+    @ConditionalOnMissingBean(Validator.class)
+    public Validator validator() {
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        Validator validator = factory.getValidator();
+        return validator;
+    }
+
+    @Bean(name = "entityFactory")
+    @ConditionalOnMissingBean(EntityFactory.class)
     public EntityFactory entityFactory() {
-        return new MapperEntityFactory();
+        return new MapperEntityFactory(entityProperties.createMappers());
     }
 
 }

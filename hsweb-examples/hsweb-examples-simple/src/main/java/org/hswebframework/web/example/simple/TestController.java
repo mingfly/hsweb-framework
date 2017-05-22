@@ -1,10 +1,10 @@
 package org.hswebframework.web.example.simple;
 
-import org.apache.shiro.authz.annotation.RequiresUser;
-import org.hswebframework.web.authorization.Authorization;
-import org.hswebframework.web.authorization.AuthorizationHolder;
+import io.swagger.annotations.ApiOperation;
+import org.hswebframework.web.AuthorizeException;
+import org.hswebframework.web.authorization.Authentication;
 import org.hswebframework.web.authorization.Permission;
-import org.hswebframework.web.authorization.annotation.AuthInfo;
+import org.hswebframework.web.authorization.annotation.Authorize;
 import org.hswebframework.web.authorization.annotation.RequiresDataAccess;
 import org.hswebframework.web.authorization.annotation.RequiresFieldAccess;
 import org.hswebframework.web.commons.entity.Entity;
@@ -14,11 +14,15 @@ import org.hswebframework.web.controller.QueryController;
 import org.hswebframework.web.controller.message.ResponseMessage;
 import org.hswebframework.web.entity.authorization.SimpleUserEntity;
 import org.hswebframework.web.entity.authorization.UserEntity;
+import org.hswebframework.web.model.authorization.UserModel;
 import org.hswebframework.web.service.QueryByEntityService;
 import org.hswebframework.web.service.QueryService;
-import org.hswebframwork.utils.ClassUtils;
+import org.hswebframework.web.service.authorization.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.ContextLoader;
 
+import javax.annotation.PostConstruct;
 import java.util.List;
 
 /**
@@ -27,31 +31,47 @@ import java.util.List;
  * @author zhouhao
  */
 @RestController
+@RequestMapping("/test")
+@Authorize(permission = "test")
 public class TestController implements QueryController<UserEntity, String, QueryParamEntity> {
 
-    @GetMapping("/test")
-    @RequiresUser
-    public ResponseMessage testShiro(@AuthInfo Authorization authorization) {
-        return ResponseMessage.ok(authorization);
+    @GetMapping("/test1")
+    @Authorize(action = "query")
+    public ResponseMessage testSimple(Authentication authentication) {
+        return ResponseMessage.ok(authentication).exclude(Authentication.class, "attributes");
+    }
+
+    @GetMapping("/test2")
+//    @RequiresRoles("admin")
+    public ResponseMessage test2(Authentication authentication) {
+        return ResponseMessage.ok(authentication);
     }
 
     @GetMapping("/testQuery")
-    @RequiresUser
+    @Authorize
     @RequiresDataAccess(permission = "test", action = Permission.ACTION_QUERY)
     @RequiresFieldAccess(permission = "test", action = Permission.ACTION_QUERY)
-    public ResponseMessage testQuery(QueryParamEntity entity) {
+    @ApiOperation("测试查询")
+    public ResponseMessage<QueryParamEntity> testQuery(QueryParamEntity entity) {
+
+        /*
+        @RequiresFieldAccess 字段级别权限控制
+        entity.getExcludes() 自动填充不能访问的字段
+        */
+
+        /*
+        @RequiresDataAccess 数据级别权限控制
+        entity.terms 被嵌入查询条件
+        */
         return ResponseMessage.ok(entity);
     }
-
 
     @PutMapping("/testUpdate/{id}")
-    @RequiresUser
     @RequiresDataAccess(permission = "test", action = Permission.ACTION_UPDATE)
     @RequiresFieldAccess(permission = "test", action = Permission.ACTION_UPDATE)
-    public ResponseMessage testUpdate(@PathVariable String id, @RequestBody UserEntity entity) {
-        return ResponseMessage.ok(entity);
+    public ResponseMessage<UserModel> testUpdate(@PathVariable String id, @RequestBody UserModel model) {
+        return ResponseMessage.ok(model);
     }
-
 
     @Override
     public TestService getService() {
@@ -64,9 +84,13 @@ public class TestController implements QueryController<UserEntity, String, Query
         public UserEntity selectByPk(String id) {
             SimpleUserEntity userEntity = new SimpleUserEntity();
             // 同一个用户
-            userEntity.setCreatorId(AuthorizationHolder.get().getUser().getId());
-
+            userEntity.setCreatorId(Authentication.current().orElseThrow(AuthorizeException::new).getUser().getId());
             return userEntity;
+        }
+
+        @Override
+        public List<UserEntity> selectByPk(List<String> id) {
+            return null;
         }
 
         @Override

@@ -17,20 +17,26 @@
 
 package org.hswebframework.web.controller.authorization;
 
-import org.hswebframework.web.authorization.annotation.AuthInfo;
-import org.hswebframework.web.authorization.Authorization;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import org.hswebframework.web.AuthorizeException;
+import org.hswebframework.web.authorization.Authentication;
+import org.hswebframework.web.authorization.Permission;
 import org.hswebframework.web.authorization.annotation.Authorize;
+import org.hswebframework.web.commons.entity.PagerResult;
 import org.hswebframework.web.commons.entity.param.QueryParamEntity;
 import org.hswebframework.web.controller.CreateController;
 import org.hswebframework.web.controller.QueryController;
 import org.hswebframework.web.controller.message.ResponseMessage;
 import org.hswebframework.web.entity.authorization.UserEntity;
 import org.hswebframework.web.logging.AccessLogger;
+import org.hswebframework.web.model.authorization.UserModel;
 import org.hswebframework.web.service.authorization.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import static org.hswebframework.web.controller.message.ResponseMessage.*;
+
+import static org.hswebframework.web.controller.message.ResponseMessage.ok;
 
 /**
  * TODO 完成注释
@@ -41,20 +47,12 @@ import static org.hswebframework.web.controller.message.ResponseMessage.*;
 @RequestMapping("${hsweb.web.mappings.user:user}")
 @Authorize(permission = "user")
 @AccessLogger("用户管理")
-public class UserController implements QueryController<UserEntity, String, QueryParamEntity>, CreateController<UserEntity, String> {
+@Api(tags = "user-manager", description = "用户基本信息管理")
+public class UserController implements
+        QueryController<UserEntity, String, QueryParamEntity>,
+        CreateController<UserEntity, String, UserModel> {
 
     private UserService userService;
-
-    @Autowired
-    public void setUserService(UserService userService) {
-        this.userService = userService;
-    }
-
-    @Override
-    public ResponseMessage list(QueryParamEntity param) {
-        return QueryController.super.list(param)
-                .exclude(UserEntity.class, "password", "salt");
-    }
 
     @Override
     @SuppressWarnings("unchecked")
@@ -62,46 +60,79 @@ public class UserController implements QueryController<UserEntity, String, Query
         return userService;
     }
 
+    @Autowired
+    public void setUserService(UserService userService) {
+        this.userService = userService;
+    }
+
+    @Override
+    public UserEntity modelToEntity(UserModel model, UserEntity entity) {
+        entity.setName(model.getName());
+        entity.setPassword(model.getPassword());
+        entity.setUsername(model.getUsername());
+        return entity;
+    }
+
+    @Override
+    public ResponseMessage<PagerResult<UserEntity>> list(QueryParamEntity param) {
+        param.excludes("password", "salt");
+        return QueryController.super.list(param)
+                .exclude(UserEntity.class, "password", "salt");
+    }
+
+    @Override
+    public ResponseMessage<UserEntity> getByPrimaryKey(@PathVariable String id) {
+        return QueryController.super.getByPrimaryKey(id)
+                .exclude(UserEntity.class, "password", "salt");
+    }
+
     @Authorize(action = "update")
-    @PutMapping(path = "/{id}")
-    @AccessLogger("根据主键修改数据")
-    public ResponseMessage updateByPrimaryKey(@PathVariable String id, @RequestBody UserEntity data) {
-        data.setId(id);
-        getService().update(data);
+    @PutMapping(path = "/{id:.+}")
+    @AccessLogger("{update_by_primary_key}")
+    @ApiOperation("根据ID修改用户信息")
+    public ResponseMessage<Void> updateByPrimaryKey(@PathVariable String id,
+                                                    @RequestBody UserModel userModel) {
+        getService().update(id, modelToEntity(userModel, getService().createEntity()));
         return ok();
     }
 
-    @Authorize
+    @Authorize(merge = false)
     @PutMapping(path = "/password")
-    @AccessLogger("修改当前用户密码")
-    public ResponseMessage updateLoginUserPassword(@AuthInfo Authorization authorization,
-                                                   @RequestParam String password,
-                                                   @RequestParam String oldPassword) {
-        getService().updatePassword(authorization.getUser().getId(), oldPassword, password);
+    @AccessLogger("{update_password_login_user}")
+    @ApiOperation("修改当前用户的密码")
+    public ResponseMessage<Void> updateLoginUserPassword(@RequestParam String password,
+                                                         @RequestParam String oldPassword) {
+
+        Authentication authentication = Authentication.current().orElseThrow(AuthorizeException::new);
+        getService().updatePassword(authentication.getUser().getId(), oldPassword, password);
         return ok();
     }
 
-    @Authorize(action = "update")
-    @PutMapping(path = "/password/{id}")
-    @AccessLogger("修改密码")
-    public ResponseMessage updateByPasswordPrimaryKey(@PathVariable String id,
-                                                      @RequestParam String password,
-                                                      @RequestParam String oldPassword) {
+    @Authorize(action = Permission.ACTION_UPDATE)
+    @PutMapping(path = "/password/{id:.+}")
+    @AccessLogger("{update_password_by_id}")
+    @ApiOperation("修改指定用户的密码")
+    public ResponseMessage<Void> updateByPasswordPrimaryKey(@PathVariable String id,
+                                                            @RequestParam String password,
+                                                            @RequestParam String oldPassword) {
         getService().updatePassword(id, oldPassword, password);
         return ok();
     }
 
     @Authorize(action = "enable")
     @PutMapping(path = "/{id}/enable")
-    @AccessLogger("启用用户")
-    public ResponseMessage enable(@PathVariable String id) {
+    @AccessLogger("{enable_user}")
+    @ApiOperation("启用用户")
+    public ResponseMessage<Boolean> enable(@PathVariable String id) {
         return ok(getService().enable(id));
     }
 
     @Authorize(action = "disable")
     @PutMapping(path = "/{id}/disable")
-    @AccessLogger("禁用用户")
-    public ResponseMessage disable(@PathVariable String id) {
+    @AccessLogger("{disable_user}")
+    @ApiOperation("禁用用户")
+    public ResponseMessage<Boolean> disable(@PathVariable String id) {
         return ok(getService().disable(id));
     }
+
 }

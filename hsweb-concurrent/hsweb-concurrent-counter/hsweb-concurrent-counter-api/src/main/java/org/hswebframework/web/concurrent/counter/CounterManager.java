@@ -17,8 +17,6 @@
 
 package org.hswebframework.web.concurrent.counter;
 
-import java.util.Map;
-
 /**
  * TODO 完成注释
  *
@@ -26,11 +24,6 @@ import java.util.Map;
  */
 public interface CounterManager {
 
-    Map<String, Counter> getCounters();
+    Counter getCounter(String name);
 
-    default Counter getCounter(String name) {
-        return getCounter(name, 0);
-    }
-
-    Counter getCounter(String name, Number initValue);
 }

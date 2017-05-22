@@ -21,13 +21,14 @@ package org.hswebframework.web.service;
 import org.hswebframework.web.commons.entity.GenericEntity;
 import org.hswebframework.web.commons.entity.RecordCreationEntity;
 import org.hswebframework.web.dao.CrudDao;
+import org.hswebframework.web.id.IDGenerator;
 import org.hswebframwork.utils.ClassUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * TODO 完成注释
+ * 通用实体服务类，提供增删改查的默认实现
  *
  * @author zhouhao
  */
@@ -41,6 +42,14 @@ public abstract class GenericEntityService<E extends GenericEntity<PK>, PK>
         super();
     }
 
+    /**
+     * 获取ID生成器,在insert的时候，如果ID为空,则调用生成器进行生成
+     *
+     * @return IDGenerator
+     * @see IDGenerator
+     */
+    protected abstract IDGenerator<PK> getIDGenerator();
+
     @Override
     public abstract CrudDao<E, PK> getDao();
 
@@ -52,14 +61,19 @@ public abstract class GenericEntityService<E extends GenericEntity<PK>, PK>
     }
 
     @Override
-    public int updateByPk(E entity) {
+    public int updateByPk(PK pk, E entity) {
+        entity.setId(pk);
         tryValidate(entity);
         return createUpdate(entity)
                 //如果是RecordCreationEntity则不修改creator_id和creator_time
                 .when(ClassUtils.instanceOf(getEntityType(), RecordCreationEntity.class),
-                        update -> update.and().excludes("creator_id", "creator_time"))
-                .where(GenericEntity.id, entity.getId())
+                        update -> update.and().excludes(RecordCreationEntity.creatorId, RecordCreationEntity.createTime))
+                .where(GenericEntity.id, pk)
                 .exec();
+    }
+
+    protected int updateByPk(E entity) {
+        return updateByPk(entity.getId(), entity);
     }
 
     @Override
@@ -71,17 +85,18 @@ public abstract class GenericEntityService<E extends GenericEntity<PK>, PK>
     }
 
     @Override
-    public int saveOrUpdate(E entity) {
+    public PK saveOrUpdate(E entity) {
         if (null != entity.getId() && null != selectByPk(entity.getId())) {
-            return updateByPk(entity);
+            updateByPk(entity);
         } else {
             insert(entity);
         }
-        return 1;
+        return entity.getId();
     }
 
     @Override
     public PK insert(E entity) {
+        if (entity.getId() == null) entity.setId(getIDGenerator().generate());
         tryValidate(entity);
         getDao().insert(entity);
         return entity.getId();
@@ -94,4 +109,8 @@ public abstract class GenericEntityService<E extends GenericEntity<PK>, PK>
         return createQuery().where(GenericEntity.id, pk).single();
     }
 
+    @Override
+    public List<E> selectByPk(List<PK> id) {
+        return createQuery().where().in(GenericEntity.id, id).listNoPaging();
+    }
 }

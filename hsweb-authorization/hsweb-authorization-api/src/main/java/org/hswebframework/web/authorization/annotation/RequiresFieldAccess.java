@@ -17,21 +17,24 @@
 
 package org.hswebframework.web.authorization.annotation;
 
-import org.hswebframework.web.authorization.access.FieldAccess;
 import org.hswebframework.web.authorization.Permission;
+import org.hswebframework.web.authorization.access.FieldAccessConfig;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
- * todo
+ * 字段级权限控制注解,用于进行需要字段级别权限控制的声明.
+ * <p>
+ * 此注解仅用于声明此方法需要进行字段级权限控制,具体权限控制方式由控制器实{@link org.hswebframework.web.authorization.access.FieldAccessController}现
+ * </p>
  *
  * @author zhouhao
+ * @see org.hswebframework.web.authorization.access.FieldAccessController
+ * @since 3.0
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
+@Documented
 public @interface RequiresFieldAccess {
 
     /**
@@ -41,8 +44,8 @@ public @interface RequiresFieldAccess {
     String permission();
 
     /**
-     * @return
-     * @see FieldAccess#getActions()
+     * @return action
+     * @see FieldAccessConfig#getActions()
      */
     String action();
 

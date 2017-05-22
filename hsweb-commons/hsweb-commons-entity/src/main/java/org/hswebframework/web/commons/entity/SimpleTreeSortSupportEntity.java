@@ -18,7 +18,6 @@
 
 package org.hswebframework.web.commons.entity;
 
-import org.hswebframework.web.Describe;
 
 /**
  * 支持树形结构，排序的实体类，要使用树形结构，排序功能的实体类直接继承该类
@@ -28,30 +27,27 @@ public abstract class SimpleTreeSortSupportEntity<PK> extends SimpleGenericEntit
     /**
      * 父级类别
      */
-    @Describe("父级类别ID")
     private PK parentId;
 
     /**
      * 树结构编码,用于快速查找, 每一层由4位字符组成,用-分割
      * 如第一层:0001 第二层:0001-0001 第三层:0001-0001-0001
      */
-    @Describe("树识别码")
-    private String treeCode;
+    private String path;
 
     /**
      * 排序索引
      */
-    @Describe("排序索引")
-    private long sortIndex;
+    private Long sortIndex;
 
-    @Override
-    public String getTreeCode() {
-        return treeCode;
+    private Integer level;
+
+    public String getPath() {
+        return path;
     }
 
-    @Override
-    public void setTreeCode(String treeCode) {
-        this.treeCode = treeCode;
+    public void setPath(String path) {
+        this.path = path;
     }
 
     @Override
@@ -65,12 +61,22 @@ public abstract class SimpleTreeSortSupportEntity<PK> extends SimpleGenericEntit
     }
 
     @Override
-    public long getSortIndex() {
+    public Long getSortIndex() {
         return sortIndex;
     }
 
     @Override
-    public void setSortIndex(long sortIndex) {
+    public Integer getLevel() {
+        return level;
+    }
+
+    @Override
+    public void setLevel(Integer level) {
+        this.level = level;
+    }
+
+    @Override
+    public void setSortIndex(Long sortIndex) {
         this.sortIndex = sortIndex;
     }
 

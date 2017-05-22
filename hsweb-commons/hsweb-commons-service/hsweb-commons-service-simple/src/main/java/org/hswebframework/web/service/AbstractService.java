@@ -13,9 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.validation.Validator;
 
 /**
- * TODO 完成注释
+ * 抽象服务类,提供通用模板方法、类,如验证器,实体工厂等
  *
  * @author zhouhao
+ * @see CreateEntityService
+ * @see Service
  */
 public abstract class AbstractService<E extends Entity, PK> implements CreateEntityService<E>, Service {
     protected Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -51,11 +53,11 @@ public abstract class AbstractService<E extends Entity, PK> implements CreateEnt
         return null != entityFactory;
     }
 
-    protected Class<E> getEntityRealType() {
+    public Class<E> getEntityInstanceType() {
         return entityFactory.getInstanceType(getEntityType());
     }
 
-    protected Class<E> getEntityType() {
+    public Class<E> getEntityType() {
         return entityType;
     }
 

@@ -71,6 +71,9 @@ public class SimpleWebApplicationTests {
     @Autowired
     protected SqlExecutor sqlExecutor;
 
+    @Autowired
+    protected EntityFactory entityFactory;
+
     @Before
     public void setup() throws Exception {
         this.mvc = webAppContextSetup(this.wac).build();
@@ -121,19 +124,6 @@ public class SimpleWebApplicationTests {
     @SpringBootApplication
     @WebAppConfiguration
     public static class Config {
-
-        @Bean(name = "validator")
-        @ConditionalOnMissingBean(Validator.class)
-        public Validator validator() {
-            ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-            Validator validator = factory.getValidator();
-            return validator;
-        }
-
-        @Bean
-        public EntityFactory beanFactory() {
-            return new MapperEntityFactory();
-        }
 
         @Bean
         public SqlExecutor sqlExecutor(DataSource dataSource) throws SQLException {

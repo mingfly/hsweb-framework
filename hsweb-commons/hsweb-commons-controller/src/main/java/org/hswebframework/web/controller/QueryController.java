@@ -17,8 +17,14 @@
 
 package org.hswebframework.web.controller;
 
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import org.hswebframework.web.NotFoundException;
+import org.hswebframework.web.authorization.Permission;
 import org.hswebframework.web.authorization.annotation.Authorize;
 import org.hswebframework.web.commons.entity.Entity;
+import org.hswebframework.web.commons.entity.PagerResult;
 import org.hswebframework.web.commons.entity.param.QueryParamEntity;
 import org.hswebframework.web.controller.message.ResponseMessage;
 import org.hswebframework.web.logging.AccessLogger;
@@ -39,7 +45,7 @@ import static org.hswebframework.web.controller.message.ResponseMessage.ok;
  * @see QueryParamEntity
  * @see 3.0
  */
-public interface QueryController<E, PK, Q extends Entity>  {
+public interface QueryController<E, PK, Q extends Entity> {
 
     /**
      * 获取实现了{@link QueryByEntityService}和{@link QueryService}的服务类
@@ -59,18 +65,36 @@ public interface QueryController<E, PK, Q extends Entity>  {
      * @param param 参数
      * @return 查询结果
      */
-    @Authorize(action = "read")
+    @Authorize(action = Permission.ACTION_QUERY)
     @GetMapping
-    @AccessLogger("根据条件查询")
-    default ResponseMessage list(Q param) {
+    @AccessLogger("{dynamic_query}")
+    @ApiOperation("根据动态条件查询数据")
+    @ApiResponses({
+            @ApiResponse(code = 200, message = "查询成功"),
+            @ApiResponse(code = 401, message = "未授权"),
+            @ApiResponse(code = 403, message = "无权限")
+    })
+    default ResponseMessage<PagerResult<E>> list(Q param) {
         return ok(getService().selectPager(param));
     }
 
-    @Authorize(action = "read")
-    @GetMapping(path = "/{id}")
-    @AccessLogger("根据主键查询")
-    default ResponseMessage getByPrimaryKey(@PathVariable PK id) {
-        return ok(getService().selectByPk(id));
+    @Authorize(action = Permission.ACTION_GET)
+    @GetMapping(path = "/{id:.+}")
+    @AccessLogger("{get_by_id}")
+    @ApiOperation("根据主键查询数据")
+    @ApiResponses({
+            @ApiResponse(code = 200, message = "查询成功"),
+            @ApiResponse(code = 401, message = "未授权"),
+            @ApiResponse(code = 403, message = "无权限"),
+            @ApiResponse(code = 404, message = "数据不存在")
+    })
+    default ResponseMessage<E> getByPrimaryKey(@PathVariable PK id) {
+        return ok(assertNotNull(getService().selectByPk(id)));
+    }
+
+    static <T> T assertNotNull(T obj) {
+        if (null == obj) throw new NotFoundException("{data_not_exist}");
+        return obj;
     }
 
 }

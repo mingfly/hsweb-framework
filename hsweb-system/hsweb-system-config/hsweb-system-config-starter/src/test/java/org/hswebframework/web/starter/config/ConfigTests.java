@@ -54,11 +54,11 @@ public class ConfigTests extends SimpleWebApplicationTests {
                 )
                 .exec().resultAsJson();
         //{data:id,code:200}
-        Assert.assertEquals(jsonObject.getString("data"), configBean.getId());
+        Assert.assertEquals(jsonObject.getString("result"), configBean.getId());
 
         JSONObject getRes = testGet("/config/" + configBean.getId()).exec().resultAsJson();
         Assert.assertEquals(getRes
-                .getObject("data", SimpleConfigEntity.class)
+                .getObject("result", SimpleConfigEntity.class)
                 .get("test")
                 .getNumber(0).intValue(), 1);
 
@@ -66,10 +66,18 @@ public class ConfigTests extends SimpleWebApplicationTests {
                 builder.param("terms[0].column", "id")
                         .param("terms[0].value", configBean.getId())
         ).exec().resultAsJson();
-        Assert.assertEquals(getRes.getJSONObject("data").getJSONArray("data")
+        Assert.assertEquals(getRes.getJSONObject("result").getJSONArray("data")
                 .getObject(0, SimpleConfigEntity.class)
                 .get("test")
                 .getNumber(0).intValue(), 1);
+
+        jsonObject = testPut("/config/" + configBean.getId())
+                .setUp(builder -> builder.accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonStr)
+                )
+                .exec().resultAsJson();
+        Assert.assertEquals(200, jsonObject.get("status"));
     }
 
     @Test
@@ -90,7 +98,7 @@ public class ConfigTests extends SimpleWebApplicationTests {
         configBean = configService.selectSingle(QueryParamEntity.empty());
         configBean.addContent("test2", "2", "");
         //test update
-        Assert.assertEquals(configService.updateByPk(configBean), 1);
+        Assert.assertEquals(configService.updateByPk(configBean.getId(), configBean), 1);
         Assert.assertEquals(configBean.get("test2").getNumber(0).intValue(), 2);
         configBean = configService.selectSingle(QueryParamEntity.empty());
         //test delete

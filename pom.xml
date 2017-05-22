@@ -38,6 +38,7 @@
         <module>hsweb-logging</module>
         <module>hsweb-concurrent</module>
         <module>hsweb-examples</module>
+        <module>hsweb-boost</module>
     </modules>
 
     <packaging>pom</packaging>
@@ -82,12 +83,12 @@
         <project.build.jdk>${java.version}</project.build.jdk>
 
 
-        <spring.boot.version>1.4.2.RELEASE</spring.boot.version>
+        <spring.boot.version>1.4.5.RELEASE</spring.boot.version>
 
         <javassist.version>3.20.0-GA</javassist.version>
         <activiti.version>5.19.0.2</activiti.version>
 
-        <fastjson.version>1.2.6</fastjson.version>
+        <fastjson.version>1.2.28</fastjson.version>
         <h2.version>1.4.191</h2.version>
         <mysql.version>5.1.39</mysql.version>
         <cglib.version>3.2.2</cglib.version>
@@ -97,6 +98,8 @@
         <hsweb.ezorm.version>3.0.0-SNAPSHOT</hsweb.ezorm.version>
         <hsweb.utils.version>3.0.0-SNAPSHOT</hsweb.utils.version>
         <hsweb.expands.version>3.0.0-SNAPSHOT</hsweb.expands.version>
+
+        <swagger.version>2.6.1</swagger.version>
     </properties>
 
     <build>
@@ -176,11 +179,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.1.7</version>
@@ -196,11 +194,51 @@
                 <version>4.12</version>
                 <scope>test</scope>
             </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>${fastjson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.springfox</groupId>
+                <artifactId>springfox-swagger2</artifactId>
+                <version>${swagger.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.springfox</groupId>
+                <artifactId>springfox-swagger-ui</artifactId>
+                <version>${swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>1.5.10</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>3.4.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>1.9.3</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.hswebframework</groupId>
                 <artifactId>hsweb-utils</artifactId>
                 <version>${hsweb.utils.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.alibaba</groupId>
+                        <artifactId>fastjson</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
@@ -222,6 +260,10 @@
                         <groupId>org.springframework</groupId>
                         <artifactId>spring-expression</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>com.alibaba</groupId>
+                        <artifactId>fastjson</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
 
@@ -229,6 +271,12 @@
                 <groupId>org.hswebframework</groupId>
                 <artifactId>hsweb-easy-orm</artifactId>
                 <version>${hsweb.ezorm.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.alibaba</groupId>
+                        <artifactId>fastjson</artifactId>
+                    </exclusion>
+                </exclusions>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -244,6 +292,11 @@
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
+        </repository>
+        <repository>
+            <id>aliyun-nexus</id>
+            <name>aliyun</name>
+            <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
         </repository>
     </repositories>
     <distributionManagement>
@@ -266,6 +319,11 @@
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+                <id>aliyun-nexus</id>
+                <name>aliyun</name>
+                <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
         </pluginRepository>
     </pluginRepositories>
 </project>

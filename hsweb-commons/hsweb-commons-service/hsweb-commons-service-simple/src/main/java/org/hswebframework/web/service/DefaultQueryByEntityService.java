@@ -19,11 +19,10 @@
 package org.hswebframework.web.service;
 
 import org.hsweb.ezorm.core.dsl.Query;
-import org.hsweb.ezorm.core.param.QueryParam;
 import org.hswebframework.web.commons.entity.Entity;
 import org.hswebframework.web.commons.entity.PagerResult;
 import org.hswebframework.web.commons.entity.param.QueryParamEntity;
-import org.hswebframework.web.dao.dynamic.QueryByBeanDao;
+import org.hswebframework.web.dao.dynamic.QueryByEntityDao;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
@@ -32,14 +31,13 @@ import java.util.List;
 public interface DefaultQueryByEntityService<E>
         extends QueryByEntityService<E> {
 
-    QueryByBeanDao<E> getDao();
+    QueryByEntityDao<E> getDao();
 
     /**
      * 分页进行查询数据，查询条件同 {@link DefaultQueryByEntityService#select}
      *
      * @param param 查询参数
-     * @return 分页结果
-     * @ 查询异常
+     * @return 分页查询结果
      */
     @Override
     default PagerResult<E> selectPager(Entity param) {
@@ -86,11 +84,10 @@ public interface DefaultQueryByEntityService<E>
     }
 
     /**
-     * 查询只返回单个结果
+     * 查询只返回单个结果,如果有多个结果,只返回第一个
      *
      * @param param 查询条件
-     * @return 单个结果
-     * @see this#select(Entity)
+     * @return 单个查询结果
      */
     @Override
     @Transactional(readOnly = true)

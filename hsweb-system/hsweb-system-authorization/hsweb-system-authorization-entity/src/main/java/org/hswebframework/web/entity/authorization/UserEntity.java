@@ -27,6 +27,12 @@ import org.hswebframework.web.commons.entity.RecordCreationEntity;
  * @author zhouhao
  */
 public interface UserEntity extends GenericEntity<String>, RecordCreationEntity {
+    String name     = "name";
+    String username = "username";
+    String salt     = "salt";
+    @SuppressWarnings("unchecked")
+    String password = "password";
+    String enabled = "enabled";
 
     void setName(String name);
 
@@ -38,23 +44,15 @@ public interface UserEntity extends GenericEntity<String>, RecordCreationEntity 
 
     void setPassword(String password);
 
-    void setSalt(String salt);
-
     String getPassword();
 
+    void setSalt(String salt);
+
     String getSalt();
-
-    Long getLastLoginTime();
-
-    void setLastLoginTime(Long lastLoginTime);
 
     Boolean isEnabled();
 
     void setEnabled(Boolean enabled);
-
-    String getLastLoginIp();
-
-    void setLastLoginIp(String lastLoginIp);
 
     @Override
     UserEntity clone();

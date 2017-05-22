@@ -17,12 +17,14 @@
 
 package org.hswebframework.web.example.simple;
 
-import com.alibaba.fastjson.JSON;
 import org.hsweb.ezorm.rdb.executor.AbstractJdbcSqlExecutor;
 import org.hsweb.ezorm.rdb.executor.SqlExecutor;
+import org.hswebframework.web.authorization.Authentication;
 import org.hswebframework.web.authorization.Permission;
-import org.hswebframework.web.authorization.access.DataAccess;
+import org.hswebframework.web.authorization.access.DataAccessConfig;
+import org.hswebframework.web.authorization.oauth2.server.entity.OAuth2ClientEntity;
 import org.hswebframework.web.commons.entity.factory.EntityFactory;
+import org.hswebframework.web.dao.oauth2.OAuth2ClientDao;
 import org.hswebframework.web.dao.datasource.DataSourceHolder;
 import org.hswebframework.web.dao.datasource.DatabaseType;
 import org.hswebframework.web.entity.authorization.*;
@@ -31,34 +33,67 @@ import org.hswebframework.web.entity.authorization.bind.BindRoleUserEntity;
 import org.hswebframework.web.service.authorization.PermissionService;
 import org.hswebframework.web.service.authorization.RoleService;
 import org.hswebframework.web.service.authorization.UserService;
-import org.hswebframework.web.service.authorization.simple.access.SimpleScriptDataAccess;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.jdbc.datasource.DataSourceUtils;
-import org.springframework.web.bind.annotation.RequestMapping;
+import springfox.documentation.builders.ApiInfoBuilder;
+import springfox.documentation.builders.PathSelectors;
+import springfox.documentation.builders.RequestHandlerSelectors;
+import springfox.documentation.service.ApiInfo;
+import springfox.documentation.spi.DocumentationType;
+import springfox.documentation.spring.web.plugins.Docket;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
-import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * TODO 完成注释
  *
  * @author zhouhao
  */
-@EnableAutoConfiguration
 @SpringBootApplication
 @Configuration
-@RequestMapping
+@EnableSwagger2
+@EnableCaching
+@EnableAspectJAutoProxy
 public class SpringBootExample implements CommandLineRunner {
+
+    @Bean
+    public Docket createRestApi() {
+        return new Docket(DocumentationType.SWAGGER_2)
+                .apiInfo(apiInfo())
+                .groupName("example")
+                .ignoredParameterTypes(HttpSession.class, Authentication.class, HttpServletRequest.class, HttpServletResponse.class)
+                .select()
+                .apis(RequestHandlerSelectors.basePackage("org.hswebframework.web"))
+                .paths(PathSelectors.any())
+                .build();
+    }
+
+    private ApiInfo apiInfo() {
+        return new ApiInfoBuilder()
+                .title("hsweb 3.0 api")
+                .description("hsweb 企业后台管理基础框架")
+                .termsOfServiceUrl("http://www.hsweb.me/")
+                .license("apache 2.0")
+                .version("3.0")
+                .build();
+    }
+
 
     @Bean
     @ConditionalOnMissingBean(SqlExecutor.class)
@@ -86,7 +121,8 @@ public class SpringBootExample implements CommandLineRunner {
     PermissionService permissionService;
     @Autowired
     EntityFactory     entityFactory;
-
+    @Autowired
+    OAuth2ClientDao oAuth2ClientDao;
 
     public static void main(String[] args) {
         SpringApplication.run(SpringBootExample.class);
@@ -94,13 +130,16 @@ public class SpringBootExample implements CommandLineRunner {
 
     @Override
     public void run(String... strings) throws Exception {
+        //只能查询自己创建的数据
         DataAccessEntity accessEntity = new DataAccessEntity();
-        accessEntity.setType(DataAccess.Type.OWN_CREATED.name());
+        accessEntity.setType(DataAccessConfig.DefaultType.OWN_CREATED);
         accessEntity.setAction(Permission.ACTION_QUERY);
 
+        //只能修改自己创建的数据
         DataAccessEntity updateAccessEntity = new DataAccessEntity();
-        updateAccessEntity.setType(DataAccess.Type.OWN_CREATED.name());
+        updateAccessEntity.setType(DataAccessConfig.DefaultType.OWN_CREATED);
         updateAccessEntity.setAction(Permission.ACTION_UPDATE);
+        //脚本方式自定义控制
 //        updateAccessEntity.setConfig(JSON.toJSONString(new SimpleScriptDataAccess("" +
 //                "println(id);" +
 //                "println(entity);" +
@@ -111,11 +150,12 @@ public class SpringBootExample implements CommandLineRunner {
         //password 属性不能读取和修改
         FieldAccessEntity fieldAccessEntity = new FieldAccessEntity();
         fieldAccessEntity.setField("password");
-        fieldAccessEntity.setActions(ActionEntity.create(Permission.ACTION_QUERY,Permission.ACTION_UPDATE));
+        fieldAccessEntity.setActions(ActionEntity.create(Permission.ACTION_QUERY, Permission.ACTION_UPDATE));
 
         PermissionEntity permission = entityFactory.newInstance(PermissionEntity.class);
         permission.setName("测试");
         permission.setId("test");
+        permission.setStatus((byte) 1);
         permission.setActions(ActionEntity.create(Permission.ACTION_QUERY, Permission.ACTION_UPDATE));
         permission.setDataAccess(Arrays.asList(accessEntity, updateAccessEntity));
         permission.setFieldAccess(Arrays.asList(fieldAccessEntity));
@@ -143,5 +183,17 @@ public class SpringBootExample implements CommandLineRunner {
         userEntity.setRoles(Arrays.asList("admin"));
         userService.insert(userEntity);
 
+        OAuth2ClientEntity clientEntity = entityFactory.newInstance(OAuth2ClientEntity.class);
+
+        clientEntity.setId("test");
+        clientEntity.setSecret("test");
+        clientEntity.setOwnerId("admin");
+        clientEntity.setName("测试");
+        clientEntity.setType("test");
+        clientEntity.setCreatorId("admin");
+        clientEntity.setRedirectUri("http://localhost");
+        clientEntity.setCreateTime(System.currentTimeMillis());
+        clientEntity.setSupportGrantTypes(Collections.singleton("*"));
+        oAuth2ClientDao.insert(clientEntity);
     }
 }

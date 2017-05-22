@@ -18,13 +18,17 @@
 
 package org.hswebframework.web.controller.config;
 
+import io.swagger.annotations.Api;
 import org.hswebframework.web.authorization.annotation.Authorize;
 import org.hswebframework.web.commons.entity.param.QueryParamEntity;
 import org.hswebframework.web.controller.GenericEntityController;
+import org.hswebframework.web.controller.message.ResponseMessage;
 import org.hswebframework.web.entity.config.ConfigEntity;
 import org.hswebframework.web.logging.AccessLogger;
 import org.hswebframework.web.service.config.ConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,7 +41,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("${hsweb.web.mappings.config:config}")
 @Authorize(permission = "config")
 @AccessLogger("配置管理")
-public class ConfigController implements GenericEntityController<ConfigEntity, String, QueryParamEntity> {
+@Api(description = "配置管理，用于系统配置信息维护")
+public class ConfigController implements GenericEntityController<ConfigEntity, String, QueryParamEntity,ConfigEntity> {
 
     private ConfigService configService;
 
@@ -50,4 +55,5 @@ public class ConfigController implements GenericEntityController<ConfigEntity, S
     public ConfigService getService() {
         return configService;
     }
+
 }
